@@ -1,8 +1,7 @@
 import mysql.connector
 import coffeemaschine
+from datetime import datetime
 
-COFFEE_PRICE = 0.7
-ESPRESSO = 1.0
 MAX_DEBT = 21.0
 
 
@@ -13,16 +12,14 @@ def main():
 
     if not auth:
         disconnect(connection)
-        return print("Card not in database")
+        return 
 
     id, fname, lname, cnumber, pref, debt = get_person_entries(connection, curr_card)
-    print(debt)
-
-    # HIER AUF EINGABE WARTEN mit IF Abfrage oder so UND GETRÄNK SPEZIFIZIEREN
+    
     # allowed = genug GELD
     allowed = is_allowed(debt)
     if not allowed:
-        print("Please pay your debt")
+       
         return False
     else:
         get_coffee(cnumber, "espresso")
@@ -55,14 +52,14 @@ def disconnect(mydb):
 
 
 def get_person_entries(mydb, card):
-    test = query_handler(mydb, "SELECT * from USER WHERE cardnumber = " + card + ";")
+    test = query_handler(mydb, "SELECT * from USERS,RFIDCHIP WHERE USERS.id=RFIDCHIP.userID AND RFIDCHIP.chipID =" + card + ";")
 
     p_id = test[0][0]
     p_fname = test[0][1]
     p_lname = test[0][2]
-    p_cnumber = str(test[0][4])
-    p_pref = test[0][5]
-    p_debt = test[0][6]
+    p_pref = test[0][4]
+    p_debt = test[0][5]
+    p_cnumber = str(test[0][6])
 
     return p_id, p_fname, p_lname, p_cnumber, p_pref, p_debt
 
@@ -85,7 +82,7 @@ def update_handler(mydb, sql):
 
 # def get_debt(mydb, card):
 #     if authenticate(mydb, card):
-#         command = "SELECT schulden FROM USER where cardnumber = " + card + ";"
+#         command = "SELECT debt FROM USER where cardnumber = " + card + ";"
 #         debt = query_handler(mydb, command)
 #         return debt[0][0]
 #     else:
@@ -93,19 +90,12 @@ def update_handler(mydb, sql):
 
 
 def authenticate(mydb, given_card):
-    sql = "SELECT cardnumber FROM USER;"
+    sql = "SELECT chipID FROM RFIDCHIP;"
     dbcard = query_handler(mydb, sql)
-    print(dbcard)
     i = 0
 
     for card in dbcard:
-        print("card: ",card)
-        print("given card: ",given_card)
-        print(type(given_card))
         shortened = card[0]
-        #shortened=int(shortened)
-        print("shortened: ",shortened)
-        print(type(shortened))
         if given_card == shortened:
             return True
         i += 1
@@ -113,8 +103,9 @@ def authenticate(mydb, given_card):
     return False
 
 
-def is_allowed(person_debt):
-    if person_debt + COFFEE_PRICE > MAX_DEBT:
+def is_allowed(person_debt,price):
+
+    if person_debt + price > MAX_DEBT:
         return False
     return True
 
@@ -127,9 +118,11 @@ def get_coffee(card, what_coffee):
 def update_debt(mydb, card, debt, drink):
     new_debt = debt + drink
     new_debt = round(new_debt, 1)
-    sql = "UPDATE USER SET schulden = " + str(new_debt) + " WHERE cardnumber =" + card + ";"
+    sql = "UPDATE USERS,RFIDCHIP SET debt = " + str(new_debt) + " WHERE USERS.id=RFIDCHIP.userID AND chipID =" + card + ";"
     update_handler(mydb, sql)
-
+    #datenow=datetime.now()
+    #sql2= "Insert into TRANSACTIONS (chipID,productID,timestamp) VALUES("+card+",1,"+str(datenow)+");"
+    #update_handler(mydb,sql2)
 
 if __name__ == '__main__':
     main()
